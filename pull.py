@@ -648,7 +648,7 @@ class YoudaoNotePull(object):
         if len(image_urls) > 0:
             print('正在转换有道云笔记「{}」中的有道云图片链接...'.format(file_path))
         for image_url in image_urls:
-            image_path = self._get_new_image_path(image_url)
+            image_path = self._get_new_image_path(file_path, image_url)
             if image_url == image_path:
                 continue
             content = content.replace(image_url, image_path)
@@ -659,7 +659,7 @@ class YoudaoNotePull(object):
             print('正在转换有道云笔记「{}」中的有道云附件链接...'.format(file_path))
         for attach_name_and_url in attach_name_and_url_list:
             attach_url = attach_name_and_url[1]
-            attach_path = self._download_ydnote_url(attach_url, attach_name_and_url[0])
+            attach_path = self._download_ydnote_url(file_path, attach_url, attach_name_and_url[0])
             if not attach_path:
                 continue
             content = content.replace(attach_url, attach_path)
@@ -668,7 +668,7 @@ class YoudaoNotePull(object):
             f.write(content.encode())
         return
 
-    def _get_new_image_path(self, image_url) -> str:
+    def _get_new_image_path(self, note_path, image_url) -> str:
         """
         将图片链接转换为新的链接
         :param image_url:
@@ -676,7 +676,7 @@ class YoudaoNotePull(object):
         """
         # 当 smms_secret_token 为空（不上传到 SM.MS），下载到图片到本地
         if not self.smms_secret_token:
-            image_path = self._download_ydnote_url(image_url)
+            image_path = self._download_ydnote_url(note_path, image_url)
             return image_path or image_url
 
         # smms_secret_token 不为空，上传到 SM.MS
@@ -686,10 +686,10 @@ class YoudaoNotePull(object):
         if not error_msg:
             return new_file_url
         print(error_msg)
-        image_path = self._download_ydnote_url(image_url)
+        image_path = self._download_ydnote_url(note_path, image_url)
         return image_path or image_url
 
-    def _download_ydnote_url(self, url, attach_name=None) -> str:
+    def _download_ydnote_url(self, note_path, url, attach_name=None) -> str:
         """
         下载文件到本地，返回本地路径
         :param url:
@@ -714,7 +714,7 @@ class YoudaoNotePull(object):
         if attach_name:
             # 默认下载附件到 youdaonote-attachments 文件夹
             file_dirname = 'youdaonote-attachments'
-            file_suffix = attach_name
+            file_suffix = os.path.splitext(attach_name)[1]
         else:
             # 默认下载图片到 youdaonote-images 文件夹
             file_dirname = 'youdaonote-images'
@@ -737,8 +737,9 @@ class YoudaoNotePull(object):
             print(error_msg)
             return ''
 
+        return os.path.relpath(local_file_path, os.path.dirname(note_path))
         # relative_file_path = self._set_relative_file_path(file_path, file_name, local_file_dir)
-        return local_file_path
+        # return local_file_path
 
     def _set_relative_file_path(self, file_path, file_name, local_file_dir) -> str:
         """
